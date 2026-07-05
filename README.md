@@ -1,104 +1,104 @@
 # regex-engine
 
-Un moteur d'expressions régulières écrit **from scratch en Rust**, fondé sur les
-**dérivées de Brzozowski**.
+A regular-expression engine written **from scratch in Rust**, based on
+**Brzozowski derivatives**.
 
-L'idée : plutôt que de compiler la regex en automate (NFA/DFA) via la construction
-de Thompson, on manipule directement l'expression régulière comme une structure de
-données et on la « dérive » caractère par caractère. Une chaîne est reconnue si,
-après avoir consommé tous ses caractères, l'expression obtenue accepte le mot vide.
+The idea: instead of compiling the regex into an automaton (NFA/DFA) via Thompson's
+construction, we manipulate the regular expression directly as a data structure and
+"differentiate" it one character at a time. A string is accepted if, after consuming
+all of its characters, the resulting expression accepts the empty word.
 
-## Le principe en deux fonctions
+## The principle in two functions
 
-- **`nullable(r)`** — est-ce que l'expression `r` reconnaît le mot vide `ε` ?
-- **`derivative(r, c)`** — l'expression qui reconnaît « tout ce que `r` reconnaît,
-  mais après avoir consommé le caractère `c` ».
+- **`nullable(r)`** — does the expression `r` accept the empty word `ε`?
+- **`derivative(r, c)`** — the expression that accepts "everything `r` accepts, but
+  after consuming the character `c`".
 
-Reconnaître une chaîne `c₀c₁…cₙ` revient alors à calculer :
+Matching a string `c₀c₁…cₙ` then boils down to computing:
 
 ```
 nullable( derivative( … derivative(derivative(r, c₀), c₁) … , cₙ) )
 ```
 
-## L'AST actuel
+## Current AST
 
 ```rust
 pub enum Reg {
-    Empty,                    // ∅  — ne reconnaît rien
-    Eps,                      // ε  — reconnaît le mot vide
-    Chr(char),                // 'a' — un caractère
-    Alt(Box<Reg>, Box<Reg>),  // r | s  — alternative
-    Seq(Box<Reg>, Box<Reg>),  // r s    — concaténation
-    Star(Box<Reg>),           // r*     — étoile de Kleene
+    Empty,                    // ∅  — matches nothing
+    Eps,                      // ε  — matches the empty word
+    Chr(char),                // 'a' — a single character
+    Alt(Box<Reg>, Box<Reg>),  // r | s  — alternation
+    Seq(Box<Reg>, Box<Reg>),  // r s    — concatenation
+    Star(Box<Reg>),           // r*     — Kleene star
 }
 ```
 
-## État d'avancement
+## Status
 
-- [x] AST des expressions régulières (`Reg`)
-- [x] Fonction `nullable`
+- [x] Regular-expression AST (`Reg`)
+- [x] `nullable` function
 
-C'est le tout début : les fondations sont posées, le moteur de reconnaissance
-reste à écrire (voir la roadmap).
+This is the very beginning: the foundations are in place, but the matching engine
+itself is still to be written (see the roadmap).
 
-## Construire & lancer
+## Build & run
 
 ```bash
-cargo build      # compiler
-cargo run        # exécuter le binaire de démo
-cargo test       # lancer les tests (à venir)
+cargo build      # compile
+cargo run        # run the demo binary
+cargo test       # run the tests (coming soon)
 ```
 
-Prérequis : une toolchain Rust récente (edition 2024).
+Requirements: a recent Rust toolchain (edition 2024).
 
 ## Roadmap
 
-### Phase 1 — Cœur du moteur par dérivées
-- [ ] `derivative(r, c)` — dérivée de Brzozowski
-- [ ] `matches(r, input)` — reconnaissance d'une chaîne complète
-- [ ] Constructeurs « intelligents » (smart constructors) pour normaliser/simplifier
-      les expressions et éviter l'explosion de leur taille
-- [ ] Premiers tests unitaires
+### Phase 1 — Core derivative engine
+- [ ] `derivative(r, c)` — Brzozowski derivative
+- [ ] `matches(r, input)` — full-string matching
+- [ ] Smart constructors to normalize/simplify expressions and prevent their size
+      from blowing up
+- [ ] First unit tests
 
-### Phase 2 — Opérateurs étendus (sucre syntaxique)
-- [ ] `r+` (une ou plusieurs), `r?` (zéro ou un)
-- [ ] `.` (n'importe quel caractère)
-- [ ] Classes de caractères `[a-z]`, `[^…]`
-- [ ] Quantificateurs bornés `{n}`, `{n,m}`
+### Phase 2 — Extended operators (syntactic sugar)
+- [ ] `r+` (one or more), `r?` (zero or one)
+- [ ] `.` (any character)
+- [ ] Character classes `[a-z]`, `[^…]`
+- [ ] Bounded quantifiers `{n}`, `{n,m}`
 
 ### Phase 3 — Parsing
-- [ ] Lexer + parser d'une chaîne (`"a(b|c)*"`) vers l'AST `Reg`
-- [ ] Gestion des priorités et des parenthèses
-- [ ] Échappements (`\.`, `\*`, `\(`, …)
-- [ ] Messages d'erreur clairs sur regex invalide
+- [ ] Lexer + parser from a string (`"a(b|c)*"`) to the `Reg` AST
+- [ ] Operator precedence and parentheses handling
+- [ ] Escapes (`\.`, `\*`, `\(`, …)
+- [ ] Clear error messages on invalid regex
 
-### Phase 4 — Compilation en automate
-- [ ] Construction d'un DFA directement à partir des dérivées (approche Brzozowski)
-- [ ] Mémoïsation des états dérivés (cache) pour la performance
-- [ ] (Alternative) NFA de Thompson + simulation, pour comparer les approches
+### Phase 4 — Automaton compilation
+- [ ] Build a DFA directly from derivatives (Brzozowski approach)
+- [ ] Memoize derived states (cache) for performance
+- [ ] (Alternative) Thompson NFA + simulation, to compare approaches
 
-### Phase 5 — Recherche & extraction
-- [ ] Recherche de sous-chaîne, pas seulement match complet : `find`, `find_all`
-- [ ] Ancres `^`, `$` et limites de mot `\b`
-- [ ] Groupes de capture
+### Phase 5 — Search & extraction
+- [ ] Substring search, not just full match: `find`, `find_all`
+- [ ] Anchors `^`, `$` and word boundaries `\b`
+- [ ] Capture groups
 
-### Phase 6 — Ergonomie & qualité
-- [ ] Séparer bibliothèque (`lib.rs`) et binaire CLI (`main.rs`)
-- [ ] Petit outil en ligne de commande façon `grep`
-- [ ] Documentation (`cargo doc`) et exemples
+### Phase 6 — Ergonomics & quality
+- [ ] Split library (`lib.rs`) and CLI binary (`main.rs`)
+- [ ] Small `grep`-like command-line tool
+- [ ] Documentation (`cargo doc`) and examples
 - [ ] Benchmarks (`criterion`)
-- [ ] Property testing / fuzzing en comparant les résultats au crate `regex`
+- [ ] Property testing / fuzzing, cross-checking results against the `regex` crate
 
-### Phase 7 — Pour aller plus loin (optionnel)
-- [ ] Support Unicode complet et classes Unicode
-- [ ] Traitement UTF-8 au niveau octet
-- [ ] Optimisations (détection de préfixes littéraux, etc.)
+### Phase 7 — Going further (optional)
+- [ ] Full Unicode support and Unicode classes
+- [ ] Byte-level UTF-8 handling
+- [ ] Optimizations (literal prefix detection, etc.)
 
-## Références
+## References
 
 - Janusz A. Brzozowski, *Derivatives of Regular Expressions* (1964)
 - Owens, Reppy, Turon, *Regular-expression derivatives re-examined* (2009)
 
-## Licence
+## License
 
-Projet personnel — à définir.
+Personal project — to be defined.
