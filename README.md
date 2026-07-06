@@ -37,16 +37,40 @@ pub enum Reg {
 
 - [x] Regular-expression AST (`Reg`)
 - [x] `nullable` function
+- [x] `derivative` function + `eta` (ν)
+- [x] First unit tests (membership via derivatives)
 
-This is the very beginning: the foundations are in place, but the matching engine
-itself is still to be written (see the roadmap).
+The core derivative engine works; next up are smart constructors, then the
+extended operators and the parser (see the roadmap).
+
+## Project structure
+
+Current and planned layout — files marked with a phase number don't exist yet:
+
+```
+regex-engine/
+├── Cargo.toml
+├── README.md
+├── derivative.md        # notes on Brzozowski derivatives
+└── src/
+    ├── main.rs          # today: everything lives here (AST, nullable, derivative, tests)
+    │                    # later (Phase 6): thin CLI on top of the library
+    ├── lib.rs           # Phase 6 — library root, public API
+    ├── ast.rs           # Phase 1 — Reg enum + smart constructors (simplification)
+    ├── derivative.rs    # Phase 1 — nullable, eta, derivative, matches
+    ├── parser.rs        # Phase 3 — lexer + parser: "a(b|c)*" → Reg
+    ├── dfa.rs           # Phase 4 — DFA built from derivatives, state memoization
+    ├── search.rs        # Phase 5 — find / find_all, anchors, capture groups
+    └── bin/
+        └── rgrep.rs     # Phase 6 — small grep-like CLI tool
+```
 
 ## Build & run
 
 ```bash
 cargo build      # compile
 cargo run        # run the demo binary
-cargo test       # run the tests (coming soon)
+cargo test       # run the tests
 ```
 
 Requirements: a recent Rust toolchain (edition 2024).
@@ -54,11 +78,11 @@ Requirements: a recent Rust toolchain (edition 2024).
 ## Roadmap
 
 ### Phase 1 — Core derivative engine
-- [ ] `derivative(r, c)` — Brzozowski derivative
-- [ ] `matches(r, input)` — full-string matching
+- [x] `derivative(r, c)` — Brzozowski derivative
+- [ ] `matches(r, input)` — full-string matching (exists as a test helper for now)
 - [ ] Smart constructors to normalize/simplify expressions and prevent their size
       from blowing up
-- [ ] First unit tests
+- [x] First unit tests
 
 ### Phase 2 — Extended operators (syntactic sugar)
 - [ ] `r+` (one or more), `r?` (zero or one)
