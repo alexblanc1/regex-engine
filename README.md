@@ -117,6 +117,7 @@ Requirements: a recent Rust toolchain (edition 2024).
 - [ ] Full Unicode support and Unicode classes
 - [ ] Byte-level UTF-8 handling
 - [ ] Optimizations (literal prefix detection, etc.)
+- [ ] Build a Regex playground with the Ratatui API
 
 ## References
 
