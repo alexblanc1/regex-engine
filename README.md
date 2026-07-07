@@ -84,6 +84,24 @@ Requirements: a recent Rust toolchain (edition 2024).
       from blowing up
 - [x] First unit tests
 
+```
+*Canonicalisation* :
+
+a+b et b+a désignent le même langage.
+
+*Simplification algébrique* :
+
+r + ∅ = r
+r + r = r
+r ε = r
+ε r = r
+∅ r = ∅
+r ∅ = ∅
+(r*)* = r*
+```
+
+      
+
 ### Phase 2 — Extended operators (syntactic sugar)
 - [ ] `r+` (one or more), `r?` (zero or one)
 - [ ] `.` (any character)
@@ -118,6 +136,8 @@ Requirements: a recent Rust toolchain (edition 2024).
 - [ ] Byte-level UTF-8 handling
 - [ ] Optimizations (literal prefix detection, etc.)
 - [ ] Build a Regex playground with the Ratatui API
+- [ ] Study the algebraic struct of a regex engine
+- [ ] Hash-consing 
 
 ## References
 
