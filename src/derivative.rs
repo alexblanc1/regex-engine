@@ -1,5 +1,5 @@
-use crate::ast::Reg;
-use crate::ast::Reg::{Empty, Eps, Alt, Seq, Star};
+use crate::ast::{alt, seq, star, Reg};
+use crate::ast::Reg::{Empty, Eps};
 
 //A regular expression is said nullable if it contains Eps
 pub fn nullable(re: &Reg) -> bool {
@@ -32,16 +32,19 @@ pub fn derivative(re: &Reg, chr: &char) -> Reg {
         Reg::Eps => Empty,
         // a^-1 a = eps, but a^-1 b = empty: the symbol is only consumed if it matches
         Reg::Chr(c) => if c == chr { Eps } else { Empty },
-        Reg::Alt(r, s) => Alt(Box::new(derivative(r, chr)), Box::new(derivative(s, chr))),
+        // Every construction below goes through the smart constructors, so
+        // each intermediate result stays in normal form and derivatives no
+        // longer blow up in size.
+        Reg::Alt(r, s) => alt(derivative(r, chr), derivative(s, chr)),
         // a^-1(RS) = (a^-1 R)S  ∨  ν(R)(a^-1 S)
         // The second branch matters when R can match the empty string:
         // the symbol may then be consumed by S directly.
-        Reg::Seq(r, s) => Alt(
-            Box::new(Seq(Box::new(derivative(r, chr)), s.clone())),
-            Box::new(Seq(Box::new(eta(r)), Box::new(derivative(s, chr)))),
+        Reg::Seq(r, s) => alt(
+            seq(derivative(r, chr), (**s).clone()),
+            seq(eta(r), derivative(s, chr)),
         ),
         // a^-1(R*) = (a^-1 R)R*
-        Reg::Star(r) => Seq(Box::new(derivative(r, chr)), Box::new(Star(r.clone()))),
+        Reg::Star(r) => seq(derivative(r, chr), star((**r).clone())),
     }
 }
 
@@ -138,5 +141,22 @@ mod tests {
         assert!(matches(&re, "ccc"));
         assert!(!matches(&re, "a"));
         assert!(!matches(&re, "abc"));
+    }
+
+    #[test]
+    fn derivatives_stay_bounded() {
+        // The whole point of the smart constructors: repeated derivatives
+        // must not blow up. Here a^-1(a*b) simplifies back to a*b itself,
+        // so the size stays constant (without simplification it grows at
+        // every single step).
+        let re = Seq(Box::new(Star(chr('a'))), chr('b'));
+        let bound = re.size();
+        let mut current = re.clone();
+        for _ in 0..10 {
+            current = derivative(&current, &'a');
+            assert!(current.size() <= bound);
+        }
+        // Even stronger: a^-1(a*b) = a*b exactly, we land on the same term.
+        assert_eq!(current, re);
     }
 }

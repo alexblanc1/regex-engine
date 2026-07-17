@@ -1,11 +1,10 @@
-use regex_engine::Reg::{Chr, Alt, Seq, Star};
-use regex_engine::{derivative, nullable};
+use regex_engine::Reg::Chr;
+use regex_engine::{alt, derivative, nullable, seq, star};
 
 fn main() {
-    let a = Box::new(Chr('a'));
-    let b = Box::new(Chr('b'));
-    // a* | ba
-    let expr = Alt(Box::new(Star(a.clone())), Box::new(Seq(b, a.clone())));
-    println!("{}", nullable(&a));
+    // a* | ba, built through the smart constructors
+    let expr = alt(star(Chr('a')), seq(Chr('b'), Chr('a')));
+    println!("{}", nullable(&expr));
+    // b^-1(a* | ba) now comes out fully simplified: just `a`
     println!("{}", derivative(&expr, &'b'));
 }
