@@ -7,6 +7,8 @@ pub fn nullable(re: &Reg) -> bool {
         Reg::Empty => false,
         Reg::Eps => true,
         Reg::Chr(_) => false,
+        // A class matches exactly one character, so never the empty word.
+        Reg::Class(_) => false,
         Reg::Alt(r, s) => nullable(r) || nullable(s),
         Reg::Seq(r, s) => nullable(r) && nullable(s),
         Reg::Star(_) => true,
@@ -32,6 +34,8 @@ pub fn derivative(re: &Reg, chr: &char) -> Reg {
         Reg::Eps => Empty,
         // a^-1 a = eps, but a^-1 b = empty: the symbol is only consumed if it matches
         Reg::Chr(c) => if c == chr { Eps } else { Empty },
+        // Same rule generalized to a set: ε if the symbol is in the class, ∅ otherwise.
+        Reg::Class(cc) => if cc.contains(*chr) { Eps } else { Empty },
         // Every construction below goes through the smart constructors, so
         // each intermediate result stays in normal form and derivatives no
         // longer blow up in size.
@@ -61,6 +65,12 @@ pub fn matches(re: &Reg, word: &str) -> bool {
     let mut current = re.clone();
     for c in word.chars() {
         current = derivative(&current, &c);
+        // Once we reach ∅, every further derivative stays ∅ and ν(∅) = false:
+        // no remaining character can rescue the match, so stop early. Thanks to
+        // the smart constructors, a dead branch really does collapse to `Empty`.
+        if matches!(current, Reg::Empty) {
+            return false;
+        }
     }
     nullable(&current)
 }
@@ -69,12 +79,15 @@ pub fn matches(re: &Reg, word: &str) -> bool {
 mod tests {
     use super::*;
     use crate::ast::Reg::*;
+    use crate::ast::CharClass;
+    use crate::ast::RangeModifier::*;
 
     // Convenience constructor to keep test expressions readable.
     fn chr(c: char) -> Box<Reg> {
         Box::new(Chr(c))
     }
 
+    
     #[test]
     fn nullable_basics() {
         assert!(!nullable(&Empty));
@@ -158,5 +171,91 @@ mod tests {
         }
         // Even stronger: a^-1(a*b) = a*b exactly, we land on the same term.
         assert_eq!(current, re);
+    }
+
+    // ----- Phase 2: character sets and quantifiers -----
+
+    #[test]
+    fn matches_dot() {
+        // `.` matches exactly one character.
+        let re = Reg::any();
+        assert!(matches(&re, "a"));
+        assert!(matches(&re, "🦀"));
+        assert!(!matches(&re, ""));
+        assert!(!matches(&re, "ab"));
+    }
+
+    #[test]
+    fn matches_char_class() {
+        // [a-z]
+        let re = Reg::Class(CharClass::range('a', 'z'));
+        assert!(matches(&re, "m"));
+        assert!(!matches(&re, "M"));
+        assert!(!matches(&re, "0"));
+        assert!(!matches(&re, ""));
+    }
+
+    #[test]
+    fn matches_negated_class() {
+        // [^0-9]
+        let re = Reg::Class(CharClass::new(vec![('0', '9')], true));
+        assert!(matches(&re, "a"));
+        assert!(!matches(&re, "5"));
+    }
+
+    #[test]
+    fn matches_zero_or_one() {
+        // a?
+        let re = Chr('a').apply(ZeroOrOne);
+        assert!(matches(&re, ""));
+        assert!(matches(&re, "a"));
+        assert!(!matches(&re, "aa"));
+    }
+
+    #[test]
+    fn matches_one_or_more() {
+        // a+
+        let re = Chr('a').apply(OneOrMore);
+        assert!(!matches(&re, ""));
+        assert!(matches(&re, "a"));
+        assert!(matches(&re, "aaaa"));
+    }
+
+    #[test]
+    fn matches_repeat_exact() {
+        // a{3}
+        let re = Chr('a').apply(Repeat(3));
+        assert!(matches(&re, "aaa"));
+        assert!(!matches(&re, "aa"));
+        assert!(!matches(&re, "aaaa"));
+    }
+
+    #[test]
+    fn matches_repeat_between() {
+        // a{2,4}
+        let re = Chr('a').apply(RepeatBetween(2, 4));
+        assert!(!matches(&re, "a"));
+        assert!(matches(&re, "aa"));
+        assert!(matches(&re, "aaa"));
+        assert!(matches(&re, "aaaa"));
+        assert!(!matches(&re, "aaaaa"));
+    }
+
+    #[test]
+    fn matches_repeat_at_least() {
+        // a{2,}
+        let re = Chr('a').apply(RepeatAtLeast(2));
+        assert!(!matches(&re, "a"));
+        assert!(matches(&re, "aa"));
+        assert!(matches(&re, "aaaaaa"));
+    }
+
+    #[test]
+    fn combined_class_and_quantifier() {
+        // [a-z]+  — a run of lowercase letters
+        let re = Reg::Class(CharClass::range('a', 'z')).apply(OneOrMore);
+        assert!(matches(&re, "hello"));
+        assert!(!matches(&re, ""));
+        assert!(!matches(&re, "Hello")); // capital H is not in [a-z]
     }
 }

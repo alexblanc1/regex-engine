@@ -27,6 +27,7 @@ pub enum Reg {
     Empty,                    // ∅  — matches nothing
     Eps,                      // ε  — matches the empty word
     Chr(char),                // 'a' — a single character
+    Class(CharClass),         // ., [a-z], [^…] — a set of characters
     Alt(Box<Reg>, Box<Reg>),  // r | s  — alternation
     Seq(Box<Reg>, Box<Reg>),  // r s    — concatenation
     Star(Box<Reg>),           // r*     — Kleene star
@@ -79,8 +80,8 @@ Requirements: a recent Rust toolchain (edition 2024).
 
 ### Phase 1 — Core derivative engine
 - [x] `derivative(r, c)` — Brzozowski derivative
-- [ ] `matches(r, input)` — full-string matching (exists as a test helper for now)
-- [ ] Smart constructors to normalize/simplify expressions and prevent their size
+- [x] `matches(r, input)` — full-string matching (public API, with early exit on ∅)
+- [x] Smart constructors to normalize/simplify expressions and prevent their size
       from blowing up
 - [x] First unit tests
 
@@ -103,10 +104,22 @@ r ∅ = ∅
       
 
 ### Phase 2 — Extended operators (syntactic sugar)
-- [ ] `r+` (one or more), `r?` (zero or one)
-- [ ] `.` (any character)
-- [ ] Character classes `[a-z]`, `[^…]`
-- [ ] Bounded quantifiers `{n}`, `{n,m}`
+- [x] `r+` (one or more), `r?` (zero or one)
+- [x] `.` (any character)
+- [x] Character classes `[a-z]`, `[^…]`
+- [x] Bounded quantifiers `{n}`, `{n,m}`, `{n,}`
+
+These are exposed as **AST builders**, not yet parsed from a string (that's
+Phase 3). `.` and classes are a dedicated `Reg::Class(CharClass)` node (a set of
+characters, à la Owens et al.); quantifiers are `Reg::apply(RangeModifier)` and
+desugar through the smart constructors, so no new derivative/nullable rule is
+needed for them:
+
+```
+r?      = r | ε          r{n}    = r · r · … · r   (n times)
+r+      = r · r*          r{n,m}  = r{n} · (r?)^(m−n)
+r*                        r{n,}   = r{n} · r*
+```
 
 ### Phase 3 — Parsing
 - [ ] Lexer + parser from a string (`"a(b|c)*"`) to the `Reg` AST

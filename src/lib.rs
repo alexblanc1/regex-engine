@@ -9,5 +9,6 @@ pub mod dfa;
 pub mod search;
 
 pub use ast::Reg;
+pub use ast::{CharClass, RangeModifier};
 pub use ast::{alt, seq, star};
 pub use derivative::{derivative, eta, matches, nullable};
