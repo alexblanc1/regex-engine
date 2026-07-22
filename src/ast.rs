@@ -15,12 +15,12 @@ pub enum Reg {
 
 
 pub enum RangeModifier {
-    ZeroOrOne,
-    ZeroOrMore,
-    OneOrMore,
-    Repeat(u8),
-    RepeatAtLeast(u8),
-    RepeatBetween(u8,u8),
+    ZeroOrOne,//r?
+    ZeroOrMore,//r*
+    OneOrMore,//r+
+    Repeat(u8),//r{n}
+    RepeatAtLeast(u8),//r{n,}
+    RepeatBetween(u8,u8),//r{n,m}
 }
 
 /// A set of characters, used to represent `.` (any character), classes like
